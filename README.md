@@ -2,7 +2,7 @@
 
 A research tool that visualizes and quantifies how different noise scheduling strategies affect image generation in Stable Diffusion. Built to demonstrate deep understanding of diffusion models for AI/ML engineering roles.
 
-![Scheduler Comparison Demo](scheduler_comparison_0.png)
+![Scheduler Comparison Demo](images/mountain_scheduler_comparison.png)
 
 ## 🚀 Key Insights
 
