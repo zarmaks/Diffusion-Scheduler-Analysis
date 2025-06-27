@@ -1,6 +1,5 @@
 """
 Diffusion Model Noise Scheduler Visualization Tool
-Author: [Your Name]
 Description: A research tool to visualize and compare different noise scheduling strategies
 in Stable Diffusion, demonstrating the denoising process step-by-step.
 """
