@@ -24,9 +24,6 @@ from diffusers import (
 )
 from diffusers.schedulers.scheduling_utils import SchedulerMixin
 
-# Set up device - we'll use CPU if no GPU is available for wider compatibility
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print(f"Using device: {device}")
 
 class DiffusionSchedulerVisualizer:
     """
@@ -40,7 +37,11 @@ class DiffusionSchedulerVisualizer:
         Initialize the visualizer with a Stable Diffusion model.
         We'll load the VAE separately for efficiency when decoding intermediate states.
         """
+
         print(f"Loading Stable Diffusion pipeline from {model_id}...")
+    
+        # Set up device - we'll use CPU if no GPU is available for wider compatibility
+        self.device = self.get_device()
         
         # Load the main pipeline - we'll swap schedulers later
         self.pipe = StableDiffusionPipeline.from_pretrained(
@@ -48,7 +49,7 @@ class DiffusionSchedulerVisualizer:
             torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
             safety_checker=None,  # Disable for research purposes
             requires_safety_checker=False
-        ).to(device)
+        ).to(self.device)
         
         # Store the VAE separately for decoding latents
         self.vae = self.pipe.vae
@@ -73,6 +74,27 @@ class DiffusionSchedulerVisualizer:
             }
         }
         
+    @staticmethod
+    def get_device():
+        """
+        Returns the most suitable available torch device.
+
+        Checks for available hardware acceleration in the following order:
+        1. Apple Silicon's Metal Performance Shaders (MPS)
+        2. NVIDIA CUDA GPUs
+        3. CPU (fallback)
+
+        Returns:
+            torch.device: The best available device for tensor computations.
+        """
+        if torch.backends.mps.is_available():
+            return torch.device("mps")
+        elif torch.cuda.is_available():
+            return torch.device("cuda")
+        else:
+            return torch.device("cpu")
+        
+
     def capture_denoising_trajectory(
         self, 
         prompt: str,
@@ -102,14 +124,14 @@ class DiffusionSchedulerVisualizer:
         scheduler.set_timesteps(num_inference_steps)
         
         # Set random seed for reproducibility
-        generator = torch.Generator(device=device).manual_seed(seed)
+        generator = torch.Generator(device=self.device).manual_seed(seed)
         
         # Encode the prompt
         text_embeddings = self._encode_prompt(prompt, guidance_scale > 1.0)
         
         # Initialize random noise
         latents_shape = (1, self.pipe.unet.config.in_channels, 64, 64)
-        latents = torch.randn(latents_shape, generator=generator, device=device, 
+        latents = torch.randn(latents_shape, generator=generator, device=self.device, 
                              dtype=text_embeddings.dtype)
         
         # Scale the initial noise by the scheduler's init noise sigma
@@ -165,7 +187,7 @@ class DiffusionSchedulerVisualizer:
         )
         
         text_input_ids = text_inputs.input_ids
-        text_embeddings = self.pipe.text_encoder(text_input_ids.to(device))[0]
+        text_embeddings = self.pipe.text_encoder(text_input_ids.to(self.device))[0]
         
         # For classifier-free guidance, we need both conditional and unconditional embeddings
         if do_classifier_free_guidance:
@@ -175,7 +197,7 @@ class DiffusionSchedulerVisualizer:
                 max_length=self.pipe.tokenizer.model_max_length,
                 return_tensors="pt",
             )
-            uncond_embeddings = self.pipe.text_encoder(uncond_tokens.input_ids.to(device))[0]
+            uncond_embeddings = self.pipe.text_encoder(uncond_tokens.input_ids.to(self.device))[0]
             text_embeddings = torch.cat([uncond_embeddings, text_embeddings])
         
         return text_embeddings
@@ -201,7 +223,7 @@ class DiffusionSchedulerVisualizer:
     def create_comparison_grid(
         self,
         prompt: str,
-        save_path: str = "scheduler_comparison.png",
+        save_path: str = "scheduler_comparison_now.png",
         num_frames: int = 6,
         seed: int = 42
     ):
@@ -308,6 +330,7 @@ class DiffusionSchedulerVisualizer:
 
 # Example usage and demonstration
 if __name__ == "__main__":
+    
     # Initialize the visualizer
     print("Initializing Diffusion Scheduler Visualizer...")
     visualizer = DiffusionSchedulerVisualizer()
