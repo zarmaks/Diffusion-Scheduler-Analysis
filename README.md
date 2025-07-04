@@ -58,8 +58,11 @@ cd diffusion-scheduler-analysis
 ```
 
 2. **Install dependencies**
+
+The next steps have been verified using python=3.12.11
+
 ```bash
-pip install diffusers transformers accelerate torch matplotlib pillow tqdm
+pip install -r requierements.txt
 ```
 
 3. **Run the analysis**
@@ -71,17 +74,19 @@ visualizer = DiffusionSchedulerVisualizer()
 
 # Create visualization
 visualizer.create_comparison_grid(
-    prompt="a serene japanese garden with cherry blossoms",
-    save_path="scheduler_comparison.png"
+    prompt=<your-prompt>,
+    save_path=<output filename>
 )
 ```
+
+or visit the **example.ipynb** notebook.
 
 ## 📚 Understanding the Code
 
 ### Architecture Overview
 ```
 DiffusionSchedulerVisualizer/
-├── __init__()              # Model loading and setup
+├── __init__()                      # Model loading and setup
 ├── capture_denoising_trajectory()  # Core analysis logic
 ├── create_comparison_grid()        # Visualization generation
 └── analyze_scheduler_efficiency()  # Quantitative analysis
